@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--名称空间-->
+<mapper namespace="com.jd.health.dao.SetmealDao">
+
+    <!--新增套餐-->
+    <insert id="add" keyProperty="id" useGeneratedKeys="true">
+        insert into t_setmeal (name,code,helpCode,sex,age,price,remark,attention,img)
+        values (#{name},#{code},#{helpCode},#{sex},#{age},#{price},#{remark},#{attention},#{img})
+    </insert>
+    <!--更新套餐检查组中间表-->
+    <insert id="addSetmealCheckGroup">
+        insert into t_setmeal_checkgroup (setmeal_id,checkgroup_id)
+        values (#{setmealId},#{checkgroupId})
+    </insert>
+
+    <!--更新套餐-->
+    <update id="update">
+        update t_setmeal set
+         name=#{name},
+         code=#{code},
+         helpCode=#{helpCode},
+         sex=#{sex},
+         age=#{age},
+         price=#{price},
+         remark=#{remark},
+         attention=#{attention},
+         img=#{img}
+        where id=#{id}
+    </update>
+
+    <!--根据套餐id删除关联的检查组信息-->
+    <delete id="deleteSetmealCheckGroupBySetmealId">
+        delete from t_setmeal_checkgroup where setmeal_id=#{setmealId}
+    </delete>
+
+    <!--删除套餐-->
+    <delete id="deleteById">
+        delete from t_setmeal where id=#{setmealId}
+    </delete>
+
+    <!--分页查询-->
+    <select id="findPage" resultType="com.jd.health.pojo.Setmeal">
+        select *from t_setmeal
+        <if test="value!=null and value.length>0">
+            where code like #{value} or name like #{value} or helpCode like #{value}
+        </if>
+    </select>
+
+    <!--根据id查询套餐-->
+    <select id="findById" resultType="com.jd.health.pojo.Setmeal" parameterType="int">
+        select *from t_setmeal where id=#{setmealId}
+    </select>
+
+    <!--//根据套餐id查询勾选关联的检查组ids-->
+    <select id="findSetmealCheckGroupBySetmealId" resultType="java.lang.Integer">
+        select  checkgroup_id from t_setmeal_checkgroup where setmeal_id=#{setmealId}
+    </select>
+
+    <!--根据套餐id查询关联订单-->
+    <select id="findOrderCountBysetmealId" resultType="java.lang.Integer">
+        select count(1) from t_order where setmeal_id=#{setmealId}
+    </select>
+
+    <!--//查询数据库中所有图片名称-->
+    <select id="findImgs" resultType="java.lang.String">
+        select img from t_setmeal
+    </select>
+
+    <!--查询所有套餐-->
+    <select id="findAll" resultType="com.jd.health.pojo.Setmeal">
+        select *from t_setmeal
+    </select>
+
+    <!--根据套餐id查询对应检查组-->
+    <select id="findCheckGroupBySetmealId" resultType="com.jd.health.pojo.CheckGroup" parameterType="int">
+        select *from t_checkgroup where id in(select checkgroup_id from t_setmeal_checkgroup where setmeal_id=#{setmealId})
+    </select>
+
+    <!--根据检查组id查询对应的检查项-->
+    <select id="findCheckItemByCheckGroupId" resultType="com.jd.health.pojo.CheckItem">
+        select *from t_checkitem where id in(select checkitem_id from t_checkgroup_checkitem where checkgroup_id=#{checkGroupId})
+    </select>
+
+
+
+    <!--根据id查询套餐页-->
+    <select id="findDetailById2" resultType="com.jd.health.pojo.Setmeal" resultMap="setmealResultMap">
+        select *from t_setmeal where id=#{setmealId}
+    </select>
+
+    <resultMap id="setmealResultMap" type="Setmeal">
+        <id property="id" column="id"/>
+        <result property="age" column="age"/>
+        <result property="attention" column="attention"/>
+        <result property="code" column="code"/>
+        <result property="helpCode" column="helpCode"/>
+        <result property="img" column="img"/>
+        <result property="price" column="price"/>
+        <result property="name" column="name"/>
+        <result property="remark" column="remark"/>
+        <result property="sex" column="sex"/>
+        <!--关联查询检查组-->
+        <collection property="checkGroups" column="id" select="com.jd.health.dao.CheckGroupDao.findCheckGroupListById">
+
+        </collection>
+    </resultMap>
+
+    <!--根据套餐id查询套餐页-->
+    <select id="findDetailById3" resultType="com.jd.health.pojo.Setmeal" resultMap="setmealDetailMap">
+        select s.id,s.name,s.age,s.sex,s.remark,s.img,
+            sc.checkgroup_id,g.name checkgroup_name,g.remark checkgroup_remark,
+            cc.checkitem_id,ci.name checkitem_name
+        From t_setmeal s
+        left join t_setmeal_checkgroup sc on s.id=sc.setmeal_id
+        left join t_checkgroup g on sc.checkgroup_id=g.id
+        left join t_checkgroup_checkitem cc on g.id=cc.checkgroup_id
+        left join t_checkitem ci on cc.checkitem_id=ci.id
+        where s.id=#{setmealId}
+    </select>
+
+    <!--查询每个套餐对应的数量-->
+    <select id="findSetmealCount" resultType="java.util.Map">
+        select s.name,t.value from t_setmeal s
+        right join (select setmeal_id,count(1) value from t_order group by setmeal_id ) t
+        on s.id=t.setmeal_id
+    </select>
+
+    <resultMap id="setmealDetailMap" type="Setmeal">
+        <id property="id" column="id"/>
+        <result property="name" column="name" />
+        <result property="code" column="code" />
+        <result property="helpCode" column="helpCode" />
+        <result property="sex" column="sex" />
+        <result property="age" column="age" />
+        <result property="price" column="price" />
+        <result property="remark" column="remark" />
+        <result property="attention" column="attention" />
+        <result property="img" column="img" />
+        <collection property="checkGroups" ofType="CheckGroup">
+            <id property="id" column="checkgroup_id"/>
+            <result property="name" column="checkgroup_name"/>
+            <result property="remark" column="checkgroup_remark"/>
+            <collection property="checkItems" ofType="CheckItem">
+                <id property="id" column="checkitem_id"/>
+                <result property="name" column="checkitem_name"/>
+            </collection>
+        </collection>
+    </resultMap>
+</mapper>
